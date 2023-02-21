@@ -10,7 +10,7 @@ const addItem = (props: Props) => {
   const router = useRouter();
   const [preview, setPreview] = useState<string>();
   const [image, setImage] = useState<File>();
-  const { contract, isLoading, error } = useContract(
+  const { contract } = useContract(
     process.env.NEXT_PUBLIC_COLLECTION_CONTRACT,
     "nft-collection"
   );
@@ -25,6 +25,7 @@ const addItem = (props: Props) => {
       return;
     }
 
+    // own type for form handling
     const target = e.target as typeof e.target & {
       name: { value: string };
       description: { value: string };
