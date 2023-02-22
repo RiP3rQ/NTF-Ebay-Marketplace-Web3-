@@ -18,6 +18,7 @@ import {
 } from "@thirdweb-dev/sdk";
 import network from "../utils/network";
 import { useRouter } from "next/router";
+import { toast } from "react-hot-toast";
 
 type Props = {};
 
@@ -74,6 +75,8 @@ const Create = (props: Props) => {
 
     const { listingType, price } = target.elements;
 
+    const notification = toast.loading("Listing new NFT!");
+
     if (listingType.value === "directListing") {
       createDirectListing(
         {
@@ -87,11 +90,15 @@ const Create = (props: Props) => {
         },
         {
           onSuccess(data, variables, context) {
-            console.log("SUCCESS!", data, variables, context);
+            toast.success("Listing made successfully!", {
+              id: notification,
+            });
             router.push("/");
           },
           onError(error, variables, context) {
-            console.log("Error!", error, variables, context);
+            toast.error("Listing couldn't be made! ERROR!", {
+              id: notification,
+            });
           },
         }
       );
@@ -111,11 +118,15 @@ const Create = (props: Props) => {
         },
         {
           onSuccess(data, variables, context) {
-            console.log("SUCCESS!", data, variables, context);
+            toast.success("Listing made successfully!", {
+              id: notification,
+            });
             router.push("/");
           },
           onError(error, variables, context) {
-            console.log("Error!", error, variables, context);
+            toast.error("Listing couldn't be made! ERROR!", {
+              id: notification,
+            });
           },
         }
       );

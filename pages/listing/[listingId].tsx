@@ -19,6 +19,7 @@ import Header from "../../components/Header";
 import Countdown from "react-countdown";
 import network from "../../utils/network";
 import { ethers } from "ethers";
+import { toast } from "react-hot-toast";
 
 type Props = {};
 
@@ -86,33 +87,45 @@ const ListingPage = (props: Props) => {
         return;
       }
 
+      // Toast notification to say enable offer making
+      const notification = toast.loading("Making an offer!");
+
       // Direct Listing
       if (listing?.type === ListingType.Direct) {
         if (
           listing.buyoutPrice.toString() ===
           ethers.utils.parseEther(bidAmount).toString()
         ) {
-          console.log("Buyout Price met, buying NFT...");
+          // Toast notification to say buying NFT
+          toast.success(
+            "You matched with required price. Buying NFT instead!",
+            {
+              id: notification,
+            }
+          );
           buyNft();
           return;
         }
 
-        console.log("Buyout Price !NOT! met, making offer...");
         await makeOffer(
           {
-            quantity: 1,
             listingId,
+            quantity: 1,
             pricePerToken: bidAmount,
           },
           {
             onSuccess(data, variables, context) {
-              console.log("SUCCESS offer made", data);
-              alert("NTF offer made successfully");
+              // Toast notification to say offer made
+              toast.success("Offer made successfully", {
+                id: notification,
+              });
               setBidAmount("");
             },
             onError(error, variables, context) {
-              console.log("ERROR", error, variables, context);
-              alert("NTF make offer - ERROR");
+              // Toast notification to say offer made
+              toast.error("Offer couldn't be made! ERROR!", {
+                id: notification,
+              });
             },
           }
         );
@@ -120,8 +133,6 @@ const ListingPage = (props: Props) => {
 
       // Auction Listing
       if (listing?.type === ListingType.Auction) {
-        console.log("Making Bid");
-
         await makeBid(
           {
             listingId,
@@ -129,20 +140,22 @@ const ListingPage = (props: Props) => {
           },
           {
             onSuccess(data, variables, context) {
-              console.log("SUCCESS bid made", data);
-              alert("NTF bid made successfully");
+              // Toast notification to say bid made
+              toast.success("NTF bid made successfully", {
+                id: notification,
+              });
               setBidAmount("");
             },
             onError(error, variables, context) {
-              console.log("ERROR", error, variables, context);
-              alert("NTF make bid - ERROR");
+              // Toast notification to say bid error
+              toast.error("Bid couldn't be made! ERROR!", {
+                id: notification,
+              });
             },
           }
         );
       }
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (error) {}
   };
 
   const buyNft = async () => {
@@ -153,6 +166,9 @@ const ListingPage = (props: Props) => {
 
     if (!listingId || !contract || !listing) return;
 
+    // Toast notification to say buying NFT
+    const notification = toast.loading("Buying process initialized...");
+
     await buyNow(
       {
         id: listingId,
@@ -161,13 +177,17 @@ const ListingPage = (props: Props) => {
       },
       {
         onSuccess(data, variables, context) {
-          console.log("SUCCESS", data);
-          alert("NTF bought successfully");
+          // Toast notification to say buying was successful
+          toast.success("NTF bought successfully", {
+            id: notification,
+          });
           router.replace("/");
         },
         onError(error, variables, context) {
-          console.log("ERROR", error, variables, context);
-          alert("NTF buy - ERROR");
+          // Toast notification to say buy error
+          toast.error("NTF couldn't be bought!", {
+            id: notification,
+          });
         },
       }
     );
@@ -273,13 +293,11 @@ const ListingPage = (props: Props) => {
                             },
                             {
                               onSuccess(data, variables, context) {
-                                console.log("SUCCESS", data);
-                                alert("Accepted offer successfully");
+                                toast.success("Offer accepted successfully");
                                 router.replace("/");
                               },
                               onError(error, variables, context) {
-                                console.log("ERROR", error, variables, context);
-                                alert("Accepting offer - ERROR");
+                                toast.success("Offer couldn't be accepted!");
                               },
                             }
                           );

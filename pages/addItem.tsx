@@ -2,6 +2,7 @@ import { useAddress, useContract } from "@thirdweb-dev/react";
 import { useRouter } from "next/router";
 import React, { FormEvent, useState } from "react";
 import Header from "../components/Header";
+import { toast } from "react-hot-toast";
 
 type Props = {};
 
@@ -20,8 +21,12 @@ const addItem = (props: Props) => {
 
     if (!contract || !address) return;
 
+    const notification = toast.loading("Creating a new NFT!");
+
     if (!image) {
-      alert("Please select an image");
+      toast.error("Choose an image!", {
+        id: notification,
+      });
       return;
     }
 
@@ -43,11 +48,14 @@ const addItem = (props: Props) => {
       const tokenId = tx.id; // the id of the NFT minted
       const nft = await tx.data(); // (optional) fetch details of minted NFT
 
-      console.log(receipt, tokenId, nft);
-
+      toast.success("Huuraayy! NFT created successfully!", {
+        id: notification,
+      });
       router.push("/");
     } catch (error) {
-      alert(error);
+      toast.error("NFT couldn't be made!ERROR!", {
+        id: notification,
+      });
     }
   };
 
