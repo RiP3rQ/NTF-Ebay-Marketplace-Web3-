@@ -10,36 +10,43 @@ import {
   useMakeOffer,
   useBuyNow,
   useAddress,
+  useAcceptDirectListingOffer,
 } from "@thirdweb-dev/react";
-import { ListingType } from "@thirdweb-dev/sdk";
+import { ListingType, NATIVE_TOKENS } from "@thirdweb-dev/sdk";
 import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import Header from "../../components/Header";
 import Countdown from "react-countdown";
 import network from "../../utils/network";
+import { ethers } from "ethers";
 
 type Props = {};
 
 const ListingPage = (props: Props) => {
+  const address = useAddress();
   const router = useRouter();
   const [minimumNextBid, setMinimumNextBid] = useState<{
     displayValue: string;
     symbol: string;
   }>();
-  const [bidAmount, setBidAmount] = useState<string>();
+  const [bidAmount, setBidAmount] = useState("");
 
   const { listingId } = router.query as { listingId: string };
 
   const { contract } = useContract(
     process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT,
     "marketplace"
-  );
-  const { mutate: buyNow } = useBuyNow(contract);
+  ); // contract for marketplace
+
+  const { data: offers } = useOffers(contract, listingId); // offers for nft
+  const { mutate: buyNow } = useBuyNow(contract); // initialize buying option
+  const { mutate: makeOffer } = useMakeOffer(contract); // initialize making offer option
+  const { mutate: makeBid } = useMakeBid(contract); // initialize making bid option
 
   const networkMismatch = useNetworkMismatch();
   const [, switchNetwork] = useNetwork();
 
-  const { data: listing, isLoading, error } = useListing(contract, listingId);
+  const { data: listing, isLoading } = useListing(contract, listingId);
 
   useEffect(() => {
     if (!listingId || !contract || !listing) return;
@@ -81,10 +88,57 @@ const ListingPage = (props: Props) => {
 
       // Direct Listing
       if (listing?.type === ListingType.Direct) {
+        if (
+          listing.buyoutPrice.toString() ===
+          ethers.utils.parseEther(bidAmount).toString()
+        ) {
+          console.log("Buyout Price met, buying NFT...");
+          buyNft();
+          return;
+        }
+
+        console.log("Buyout Price !NOT! met, making offer...");
+        await makeOffer(
+          {
+            quantity: 1,
+            listingId,
+            pricePerToken: bidAmount,
+          },
+          {
+            onSuccess(data, variables, context) {
+              console.log("SUCCESS offer made", data);
+              alert("NTF offer made successfully");
+              setBidAmount("");
+            },
+            onError(error, variables, context) {
+              console.log("ERROR", error, variables, context);
+              alert("NTF make offer - ERROR");
+            },
+          }
+        );
       }
 
       // Auction Listing
       if (listing?.type === ListingType.Auction) {
+        console.log("Making Bid");
+
+        await makeBid(
+          {
+            listingId,
+            bid: bidAmount,
+          },
+          {
+            onSuccess(data, variables, context) {
+              console.log("SUCCESS bid made", data);
+              alert("NTF bid made successfully");
+              setBidAmount("");
+            },
+            onError(error, variables, context) {
+              console.log("ERROR", error, variables, context);
+              alert("NTF make bid - ERROR");
+            },
+          }
+        );
       }
     } catch (error) {
       console.log(error);
@@ -118,6 +172,8 @@ const ListingPage = (props: Props) => {
       }
     );
   };
+
+  const { mutate: acceptOffer } = useAcceptDirectListingOffer(contract);
 
   // Loader
   if (isLoading)
@@ -179,6 +235,66 @@ const ListingPage = (props: Props) => {
             </button>
           </div>
           {/* If direct, show offers here ... */}
+          {listing.type === ListingType.Direct && offers && (
+            <div className="grid grid-cols-2 gap-y-2">
+              <p className="font-bold">Offers: </p>
+              <p className="font-bold">
+                {offers.length > 0 ? offers.length : 0}
+              </p>
+
+              {offers.map((offer) => (
+                <>
+                  <p className="flex items-center ml-5 text-sm italic">
+                    <UserCircleIcon className="h-3 mr-2" />
+                    {offer.offerer.slice(0, 5) +
+                      "..." +
+                      offer.offerer.slice(-5)}
+                  </p>
+                  <div>
+                    <p
+                      key={
+                        offer.listingId +
+                        offer.offerer +
+                        offer.totalOfferAmount.toString()
+                      }
+                      className="text-sm italic"
+                    >
+                      {ethers.utils.formatEther(offer.totalOfferAmount)}{" "}
+                      {NATIVE_TOKENS[network].symbol}
+                    </p>
+
+                    {listing.sellerAddress === address && (
+                      <button
+                        onClick={() => {
+                          acceptOffer(
+                            {
+                              listingId,
+                              addressOfOfferor: offer.offerer,
+                            },
+                            {
+                              onSuccess(data, variables, context) {
+                                console.log("SUCCESS", data);
+                                alert("Accepted offer successfully");
+                                router.replace("/");
+                              },
+                              onError(error, variables, context) {
+                                console.log("ERROR", error, variables, context);
+                                alert("Accepting offer - ERROR");
+                              },
+                            }
+                          );
+                        }}
+                        className="p-2 w-32 bg-red-500/50 rounded-lg 
+                      font-bold text-sm cursor-pointer"
+                      >
+                        Accept Offer
+                      </button>
+                    )}
+                  </div>
+                </>
+              ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 space-y-2 items-center justify-end">
             <hr className="col-span-2" />
