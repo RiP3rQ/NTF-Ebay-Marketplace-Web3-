@@ -22,7 +22,6 @@ type Props = {};
 
 const ListingPage = (props: Props) => {
   const router = useRouter();
-
   const [minimumNextBid, setMinimumNextBid] = useState<{
     displayValue: string;
     symbol: string;
@@ -35,6 +34,7 @@ const ListingPage = (props: Props) => {
     process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT,
     "marketplace"
   );
+  const { mutate: buyNow } = useBuyNow(contract);
 
   const networkMismatch = useNetworkMismatch();
   const [, switchNetwork] = useNetwork();
@@ -80,13 +80,46 @@ const ListingPage = (props: Props) => {
       }
 
       // Direct Listing
+      if (listing?.type === ListingType.Direct) {
+      }
 
       // Auction Listing
+      if (listing?.type === ListingType.Auction) {
+      }
     } catch (error) {
       console.log(error);
     }
   };
 
+  const buyNft = async () => {
+    if (networkMismatch) {
+      switchNetwork && switchNetwork(network);
+      return;
+    }
+
+    if (!listingId || !contract || !listing) return;
+
+    await buyNow(
+      {
+        id: listingId,
+        buyAmount: 1,
+        type: listing.type,
+      },
+      {
+        onSuccess(data, variables, context) {
+          console.log("SUCCESS", data);
+          alert("NTF bought successfully");
+          router.replace("/");
+        },
+        onError(error, variables, context) {
+          console.log("ERROR", error, variables, context);
+          alert("NTF buy - ERROR");
+        },
+      }
+    );
+  };
+
+  // Loader
   if (isLoading)
     return (
       <div>
@@ -97,10 +130,12 @@ const ListingPage = (props: Props) => {
       </div>
     );
 
+  // Error with listing
   if (!listing) {
     return <div>Listing not found!</div>;
   }
 
+  // Actual page
   return (
     <div>
       <Header />
@@ -136,6 +171,7 @@ const ListingPage = (props: Props) => {
             </p>
 
             <button
+              onClick={buyNft}
               className="col-start-2 mt-2 bg-blue-600 font-bold
              text-white rounded-full w-44 py-4 px-10"
             >
